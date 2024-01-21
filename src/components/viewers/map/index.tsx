@@ -1,6 +1,6 @@
 import { FileProps, ViewerMetadata } from "../interfaces";
 
-import { Box, Flex, Text } from "theme-ui";
+import { Box, Flex, Text, Link } from "theme-ui";
 import { useRef } from "react";
 import { useState } from "react";
 import { useEffect } from "react";
@@ -16,6 +16,7 @@ import VectorTile from "ol/layer/VectorTile";
 import VectorLayer from "ol/layer/Vector.js";
 import { PMTilesVectorSource } from "ol-pmtiles";
 import { Style, Stroke, Fill } from "ol/style";
+import { basemapStyleFunction } from "./basemap";
 
 export const viewerMetadata: ViewerMetadata = {
 	title: "Map Viewer",
@@ -41,10 +42,7 @@ enum DataSourceType {
 
 export function MapViewer(props: FileProps) {
 	const { url, filename, contentType, size } = props;
-	const {
-		theme: { rawColors },
-		setColorMode,
-	} = useThemeUI();
+	const { colorMode } = useThemeUI();
 
 	let dataSource: DataSourceType;
 
@@ -78,11 +76,6 @@ export function MapViewer(props: FileProps) {
 			layer = new VectorTile({
 				declutter: true,
 				source: source,
-				style: (feature) => {
-					const color = feature.get("COLOR") || "black";
-					style.getFill().setColor(color);
-					return style;
-				},
 			});
 		}
 
@@ -108,37 +101,8 @@ export function MapViewer(props: FileProps) {
 			layer = new VectorLayer({
 				declutter: true,
 				source: source,
-				style: new Style({
-					stroke: new Stroke({
-						color: "gray",
-						width: 1,
-					}),
-					fill: new Fill({
-						color: "rgba(20,20,20,0.9)",
-					}),
-				}),
 			});
 		}
-
-		const basemapStyle = new Style({
-			stroke: new Stroke({
-				color: rawColors.highlight as string,
-				width: 1,
-			}),
-			fill: new Fill({
-				color: rawColors.primary as string,
-			}),
-		});
-
-		const style = new Style({
-			stroke: new Stroke({
-				color: rawColors.primary as string,
-				width: 1,
-			}),
-			fill: new Fill({
-				color: rawColors.primary as string,
-			}),
-		});
 
 		useGeographic();
 
@@ -173,15 +137,13 @@ export function MapViewer(props: FileProps) {
 			controls: [],
 			layers: [
 				new VectorTile({
+					declutter: true,
 					source: new PMTilesVectorSource({
-						url: "https://r2-public.protomaps.com/protomaps-sample-datasets/protomaps-basemap-opensource-20230408.pmtiles",
+						attributions: [
+							"<a href='https://openstreetmap.org/copyright'>© OpenStreetMap</a>",
+						],
+						url: "https://data.source.coop/protomaps/openstreetmap/tiles/v3.pmtiles",
 					}),
-					style: (feature) => {
-						const color =
-							feature.get("COLOR") || (rawColors.background as string);
-						basemapStyle.getFill().setColor(color);
-						return basemapStyle;
-					},
 				}),
 				layer,
 			],
@@ -203,6 +165,33 @@ export function MapViewer(props: FileProps) {
 		return () => m.setTarget(null);
 	}, []);
 
+	useEffect(() => {
+		if (map) {
+			const stroke =
+				colorMode === "light" ? "rgba(0,0,0,1.0)" : "rgba(255,255,255,255,255)";
+			const fill =
+				colorMode === "light" ? "rgba(0,0,0,0.7)" : "rgba(255,255,255,0.5)";
+			map
+				.getLayers()
+				.item(0)
+				.setStyle(basemapStyleFunction(map.getView(), colorMode));
+			map
+				.getLayers()
+				.item(1)
+				.setStyle(
+					new Style({
+						stroke: new Stroke({
+							color: stroke,
+							width: 1,
+						}),
+						fill: new Fill({
+							color: fill,
+						}),
+					}),
+				);
+		}
+	}, [map, colorMode]);
+
 	return (
 		<>
 			<Box
@@ -210,12 +199,37 @@ export function MapViewer(props: FileProps) {
 					width: "100%",
 					height: "50vh",
 					position: "relative",
-					p: 1,
-					backgroundColor: "primary",
+					backgroundColor: "background",
+					borderColor: "primary",
+					borderWidth: 4,
+					borderStyle: "solid",
 				}}
 				ref={mapElement}
 				className="map-container"
 			>
+				<Box
+					sx={{
+						position: "absolute",
+						bottom: 0,
+						right: 0,
+						zIndex: 1000,
+						margin: 2,
+					}}
+				>
+					<Link
+						sx={{
+							color: "text",
+							textDecoration: "none",
+							textTransform: "uppercase",
+							fontFamily: "mono",
+							fontSize: 0,
+						}}
+						href="https://openstreetmap.org/copyright"
+						target="_blank"
+					>
+						© OpenStreetMap
+					</Link>
+				</Box>
 				<Box sx={{ position: "absolute", zIndex: 998, top: 2, left: 2 }}>
 					<Box
 						ref={popupRef}
@@ -228,6 +242,7 @@ export function MapViewer(props: FileProps) {
 							borderWidth: 2,
 							borderStyle: "solid",
 							borderColor: "primary",
+							opacity: 0.5,
 						}}
 					>
 						{selectedFeature ? (
