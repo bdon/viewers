@@ -71,7 +71,7 @@ export const basemapStyleFunction = function (view, colorMode: string) {
         return new Style({
           stroke: new Stroke({
             color: theme.roads,
-            width: (zoom > 14 ? 2 : 1)
+            width: zoom > 14 ? 2 : 1,
           }),
         });
       // case "landuse":
