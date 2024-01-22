@@ -110,7 +110,6 @@ export function MapViewer(props: FileProps) {
 			layer.getFeatures(pixel).then(function (features) {
 				const feature = features.length ? features[0] : undefined;
 				if (features.length) {
-					feature["COLOR"] = rawColors.highlight as string;
 					var props = [];
 					Object.keys(feature.getProperties()).forEach((k, i) => {
 						props.push([k, feature.getProperties()[k]]);
